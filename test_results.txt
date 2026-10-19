@@ -1,0 +1,65 @@
+Local deterministic tests; no live trading, no live account authorization test.
+
+test_http_bound_before_telegram_network (test_operations.Operations.test_http_bound_before_telegram_network) ... ok
+test_scan_double_tap (test_operations.Operations.test_scan_double_tap) ... ok
+test_intrasecond_ticks_do_not_raise_score (test_operations.Quality.test_intrasecond_ticks_do_not_raise_score) ... ok
+test_sparse_baseline_unknown (test_operations.Quality.test_sparse_baseline_unknown) ... ok
+test_fast_orderly (test_radar.AnalysisTests.test_fast_orderly) ... ok
+test_flat_unknown (test_radar.AnalysisTests.test_flat_unknown) ... ok
+test_gap_unknown (test_radar.AnalysisTests.test_gap_unknown) ... ok
+test_missing_unknown (test_radar.AnalysisTests.test_missing_unknown) ... ok
+test_mixed (test_radar.AnalysisTests.test_mixed) ... ok
+test_no_forward_fill (test_radar.AnalysisTests.test_no_forward_fill) ... ok
+test_no_probability (test_radar.AnalysisTests.test_no_probability) ... ok
+test_old_receipt_unknown (test_radar.AnalysisTests.test_old_receipt_unknown) ... ok
+test_old_server_unknown (test_radar.AnalysisTests.test_old_server_unknown) ... ok
+test_reversals_red (test_radar.AnalysisTests.test_reversals_red) ... ok
+test_scale_invariance (test_radar.AnalysisTests.test_scale_invariance) ... ok
+test_slow_orderly (test_radar.AnalysisTests.test_slow_orderly) ... ok
+test_snapshot_not_mutated (test_radar.AnalysisTests.test_snapshot_not_mutated) ... ok
+test_spikes_red (test_radar.AnalysisTests.test_spikes_red) ... ok
+test_volatility_red (test_radar.AnalysisTests.test_volatility_red) ... ok
+test_warmup_fast (test_radar.AnalysisTests.test_warmup_fast) ... ok
+test_warmup_slow (test_radar.AnalysisTests.test_warmup_slow) ... ok
+test_admin_only (test_radar.AsyncTests.test_admin_only) ... ok
+test_admin_pass (test_radar.AsyncTests.test_admin_pass) ... ok
+test_disconnected_never_green (test_radar.AsyncTests.test_disconnected_never_green) ... ok
+test_feed_protocol_and_all_subscriptions (test_radar.AsyncTests.test_feed_protocol_and_all_subscriptions) ... ok
+test_private_only (test_radar.AsyncTests.test_private_only) ... ok
+test_scan_report_missing (test_radar.AsyncTests.test_scan_report_missing) ... ok
+test_scan_with_live_snapshot (test_radar.AsyncTests.test_scan_with_live_snapshot) ... ok
+test_deadline_config (test_radar.ConfigTests.test_deadline_config) ... ok
+test_load (test_radar.ConfigTests.test_load) ... ok
+test_reject_invalid_admin (test_radar.ConfigTests.test_reject_invalid_admin) ... ok
+test_reject_placeholder (test_radar.ConfigTests.test_reject_placeholder) ... ok
+test_reject_plain_cookie (test_radar.ConfigTests.test_reject_plain_cookie) ... ok
+test_reject_unsecure_url (test_radar.ConfigTests.test_reject_unsecure_url) ... ok
+test_array_tick (test_radar.DecoderTests.test_array_tick) ... ok
+test_attachment (test_radar.DecoderTests.test_attachment) ... ok
+test_auth_rejection (test_radar.DecoderTests.test_auth_rejection) ... ok
+test_dict_tick (test_radar.DecoderTests.test_dict_tick) ... ok
+test_malformed (test_radar.DecoderTests.test_malformed) ... ok
+test_multi_attachment (test_radar.DecoderTests.test_multi_attachment) ... ok
+test_nested_tick (test_radar.DecoderTests.test_nested_tick) ... ok
+test_no_history_ingestion (test_radar.DecoderTests.test_no_history_ingestion) ... ok
+test_plain (test_radar.DecoderTests.test_plain) ... ok
+test_buttons (test_radar.PresentationTests.test_buttons) ... ok
+test_numeric_metrics (test_radar.PresentationTests.test_numeric_metrics) ... ok
+test_reports_fit (test_radar.PresentationTests.test_reports_fit) ... ok
+test_bad_prices (test_radar.StoreTests.test_bad_prices) ... ok
+test_bad_time (test_radar.StoreTests.test_bad_time) ... ok
+test_bound (test_radar.StoreTests.test_bound) ... ok
+test_clear (test_radar.StoreTests.test_clear) ... ok
+test_duplicate (test_radar.StoreTests.test_duplicate) ... ok
+test_future_rejected (test_radar.StoreTests.test_future_rejected) ... ok
+test_milliseconds (test_radar.StoreTests.test_milliseconds) ... ok
+test_old_rejected (test_radar.StoreTests.test_old_rejected) ... ok
+test_out_of_order (test_radar.StoreTests.test_out_of_order) ... ok
+test_real_tick (test_radar.StoreTests.test_real_tick) ... ok
+test_stock_rejected (test_radar.StoreTests.test_stock_rejected) ... ok
+test_symbols_match (test_radar.StoreTests.test_symbols_match) ... ok
+
+----------------------------------------------------------------------
+Ran 58 tests in 2.875s
+
+OK

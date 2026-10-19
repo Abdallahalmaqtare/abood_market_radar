@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: abood-market-radar
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -u bot.py
+    healthCheckPath: /health
+    envVars:
+      - key: RADAR_BOT_TOKEN
+        sync: false
+      - key: ADMIN_TELEGRAM_ID
+        sync: false
+      - key: PO_SSID
+        sync: false
+      - key: PO_WS_URL
+        value: wss://demo-api-eu.po.market/socket.io/?EIO=4&transport=websocket
+      - key: PORT
+        value: '10000'
