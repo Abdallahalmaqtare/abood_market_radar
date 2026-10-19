@@ -3,11 +3,12 @@ from html import escape
 from assets import SYMBOL_NAMES
 from analysis import PROFILES
 
-def report(results,profile,connected,elapsed):
+def report(results,profile,connected,elapsed,live_pairs=None,feed_code=None):
     stamp=datetime.now(timezone(timedelta(hours=3))).strftime('%Y-%m-%d %H:%M:%S')
     lines=['📡 <b>Abood Market Radar</b>',f'🕒 {stamp} UTC+3',
       f'الأفق: <b>{PROFILES[profile]["label"]}</b> | الفحص: {elapsed:.1f}s',
-      f'البث: {"متصل" if connected else "غير متصل — النتائج غير معتمدة"}',
+      f'مصادقة الاتصال: {"متصلة" if connected else "غير متصلة — النتائج غير معتمدة"}',
+      f'الأسعار الحية: {live_pairs if live_pairs is not None else "غير محدد"}/{len(results)} | الحالة: {escape(feed_code or "غير محدد")}',
       f'نافذة القياس: {PROFILES[profile]["window"]}s؛ خط الأساس الإجمالي: {PROFILES[profile]["baseline"]}s',
       'التصنيف وصف للحركة الأخيرة، وليس اتجاه دخول أو نسبة نجاح.']
     groups=[('orderly','🟢 حركة أكثر انتظاماً'),('mixed','🟡 مختلط — حذر'),('unstable','🔴 اضطراب مرتفع'),('unknown','⚪ بيانات غير كافية / قديمة')]

@@ -18,6 +18,8 @@ class Config:
     tick_capacity: int = 30000
     retention_seconds: int = 900
     stream_timeout: float = 45
+    timestamp_offset: str = "auto"
+    subscription_mode: str = "browser"
 
     @classmethod
     def load(cls):
@@ -50,4 +52,12 @@ class Config:
             raise ValueError('Invalid port, scan duration or freshness threshold')
         if not 1000<=c.tick_capacity<=100000 or not 600<=c.retention_seconds<=3600 or not 10<=c.stream_timeout<=180:
             raise ValueError('Invalid capacity, retention or stream timeout')
+        c.timestamp_offset=os.getenv('PO_TIMESTAMP_OFFSET_SECONDS','auto').strip().lower()
+        if c.timestamp_offset!='auto':
+            try:
+                value=float(c.timestamp_offset)
+                if not __import__('math').isfinite(value) or abs(value)>43200:raise ValueError()
+            except ValueError:raise ValueError('Invalid PO_TIMESTAMP_OFFSET_SECONDS') from None
+        c.subscription_mode=os.getenv('PO_SUBSCRIPTION_MODE','browser').strip().lower()
+        if c.subscription_mode not in ('browser','subscribe_only'):raise ValueError('Invalid PO_SUBSCRIPTION_MODE')
         return c

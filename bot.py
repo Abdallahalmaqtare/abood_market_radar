@@ -39,11 +39,15 @@ class Controller:
     def status(self):
         covered=self.store.fresh_count(self.cfg.stale_seconds)
         return ('📡 <b>Abood Market Radar</b>\n'
-          f'الاتصال: {"🟢 متصل" if self.feed.connected else "🔴 غير متصل"}\n'
+          f'مصادقة الاتصال: {"🟢 متصلة" if self.feed.connected else "🔴 غير متصلة"}\n'
           f'الأزواج ذات تكات حديثة: {covered}/{len(SYMBOL_NAMES)}\n'
           f'اشتراكات أُرسلت: {self.feed.subscribed} (ليست تأكيد قبول)\n'
           f'إعادة الاتصال: {self.feed.reconnects}\n'
           f'كود الحالة: {self.feed.last_error}\n'
+          f'رسائل الأسعار: {self.feed.stats["stream_events"]} | صفوف أسعار: {self.feed.stats["quote_rows"]}\n'
+          f'تكات مقبولة: {self.store.accepted} | مرفوضة: {self.store.rejected}\n'
+          f'أسباب الرفض: {dict(self.store.reasons)}\n'
+          f'تصحيح ساعة الأسعار بالثواني: {dict(self.feed.clock.offsets)}\n'
           'تهيئة الأفق السريع: نحو 3 دقائق؛ الدقائق: نحو 10 دقائق بعد اتصال مستقر.\n'
           'المشروع للقراءة فقط ولا ينفذ صفقات.')
     async def scan(self,chat,profile):
@@ -57,7 +61,7 @@ class Controller:
             if not self.feed.connected:
                 for r in results:r.category='unknown';r.reasons=['البث غير متصل؛ لا اعتماد للبيانات']
             self.last_results=results;self.last_profile=profile
-            pages=report(results,profile,self.feed.connected,time.monotonic()-start)
+            pages=report(results,profile,self.feed.connected,time.monotonic()-start,live_pairs=self.store.fresh_count(self.cfg.stale_seconds),feed_code=self.feed.last_error)
             # Edit the preparation message to reduce delivery work; Telegram delivery isn't guaranteed.
             await msg.edit_text(pages[0],reply_markup=keyboard() if len(pages)==1 else None)
             for i,page in enumerate(pages[1:]):
@@ -117,7 +121,7 @@ async def main():
         return web.json_response({'service':'Abood Market Radar','alive':True})
     for path in ('/','/health','/ready'):app.router.add_get(path,health)
     runner=web.AppRunner(app);await runner.setup();await web.TCPSite(runner,'0.0.0.0',cfg.port).start()
-    log.info('HTTP server ready; read-only radar starting')
+    log.info('build=v2-feed-fix HTTP server ready; read-only radar starting')
     tasks=[]
     try:
         # Default is NOT to drop pending administrator messages.
