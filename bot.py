@@ -10,6 +10,7 @@ from config import Config
 from market import Store,Feed
 from analysis import evaluate,PROFILES
 from report import report
+from readiness import inspect_snapshot,progress_text
 log=logging.getLogger('radar')
 
 class AdminOnly(BaseMiddleware):
@@ -29,15 +30,19 @@ def keyboard():
      [InlineKeyboardButton(text='⚡ فحص 5–30 ثانية',callback_data='scan:fast')],
      [InlineKeyboardButton(text='🕯 فحص 1–5 دقائق',callback_data='scan:slow')],
      [InlineKeyboardButton(text='📡 الحالة',callback_data='status'),InlineKeyboardButton(text='ℹ️ طريقة التقييم',callback_data='about')],
-     [InlineKeyboardButton(text='📎 تفاصيل آخر فحص CSV',callback_data='export')]])
+     [InlineKeyboardButton(text='📎 تفاصيل آخر فحص CSV',callback_data='export')],
+     [InlineKeyboardButton(text='⏹ إلغاء الطلب الجاري',callback_data='cancel_scan')]])
 
 class Controller:
     def __init__(self,cfg,feed,store,bot):
         self.cfg=cfg;self.feed=feed;self.store=store;self.bot=bot
         self.scan_task=None;self.last_results=None;self.last_profile=None;self.last_scan=0
-        self.started=time.monotonic()
+        self.started=time.monotonic();self.last_readiness=None;self.current_readiness=None;self.request_state="IDLE"
     def status(self):
         covered=self.store.fresh_count(self.cfg.stale_seconds)
+        snapshot=self.store.snapshot();now=time.time();mono=time.monotonic()
+        summaries={key:inspect_snapshot(snapshot,key,now,mono,self.cfg.stale_seconds,self.feed.connected)[1] for key in PROFILES}
+        readiness_lines='\n'.join(f'{PROFILES[key]["label"]}: جاهز {info["counts"].get("ready",0)}، تهيئة {info["counts"].get("warming",0)}، تقدير متبقٍ {str(info["eta_seconds"])+"s" if info["eta_seconds"] is not None else "غير محدد"}' for key,info in summaries.items())
         return ('📡 <b>Abood Market Radar</b>\n'
           f'مصادقة الاتصال: {"🟢 متصلة" if self.feed.connected else "🔴 غير متصلة"}\n'
           f'الأزواج ذات تكات حديثة: {covered}/{len(SYMBOL_NAMES)}\n'
@@ -49,26 +54,45 @@ class Controller:
           f'أسباب الرفض: {dict(self.store.reasons)}\n'
           f'تصحيح ساعة الأسعار بالثواني: {dict(self.feed.clock.offsets)}\n'
           'تهيئة الأفق السريع: نحو 3 دقائق؛ الدقائق: نحو 10 دقائق بعد اتصال مستقر.\n'
+          f'حالة الطلب: {self.request_state}\n{readiness_lines}\n'
           'المشروع للقراءة فقط ولا ينفذ صفقات.')
     async def scan(self,chat,profile):
-        start=time.monotonic()
+        start=time.monotonic();self.request_state='SCANNING'
         try:
-            msg=await self.bot.send_message(chat,'🔎 جارٍ فحص أزواج الفوركس OTC…\nيُرسل التقرير المتاح حتى لو كانت بعض البيانات ناقصة.')
-            # Quotes accumulate concurrently. No per-pair network calls here.
+            msg=await self.bot.send_message(chat,'🔎 تم تسجيل طلب الفحص. إذا كانت العينة ناقصة سيتابع الطلب تلقائياً دون إعادة الضغط.',reply_markup=keyboard())
             await asyncio.sleep(self.cfg.scan_seconds)
-            snapshot=self.store.snapshot();now=time.time();mono=time.monotonic()
-            results=[evaluate(s,points,profile,now,mono,self.cfg.stale_seconds) for s,points in snapshot.items()]
-            if not self.feed.connected:
-                for r in results:r.category='unknown';r.reasons=['البث غير متصل؛ لا اعتماد للبيانات']
-            self.last_results=results;self.last_profile=profile
+            budget=getattr(self.cfg,'auto_wait_seconds',0)
+            deadline=start+self.cfg.scan_seconds+budget
+            while True:
+                snapshot=self.store.snapshot();now=time.time();mono=time.monotonic()
+                results,summary=inspect_snapshot(snapshot,profile,now,mono,self.cfg.stale_seconds,self.feed.connected)
+                counts=summary['counts'];self.current_readiness=summary
+                ready=counts.get('ready',0);warming=counts.get('warming',0)
+                no_live=not self.feed.connected or self.store.fresh_count(self.cfg.stale_seconds)==0
+                waiting=(warming>0 or no_live) and time.monotonic()<deadline
+                if not waiting:break
+                self.request_state='WAITING_DATA'
+                text=progress_text(summary,profile,self.store.fresh_count(self.cfg.stale_seconds),self.feed.last_error,time.monotonic()-start)
+                try:await msg.edit_text(text,reply_markup=keyboard())
+                except TelegramBadRequest as exc:
+                    if 'message is not modified' not in str(exc).lower():raise
+                log.info('Scan waiting profile=%s ready=%d warming=%d eta=%s',profile,ready,warming,summary['eta_seconds'])
+                await asyncio.sleep(min(getattr(self.cfg,'progress_seconds',15),max(.01,deadline-time.monotonic())))
+            self.last_results=results;self.last_profile=profile;self.last_readiness=summary
             pages=report(results,profile,self.feed.connected,time.monotonic()-start,live_pairs=self.store.fresh_count(self.cfg.stale_seconds),feed_code=self.feed.last_error)
-            # Edit the preparation message to reduce delivery work; Telegram delivery isn't guaranteed.
+            assessed=sum(r.category!='unknown' for r in results)
+            if assessed==0:
+                self.request_state='DATA_NOT_READY'
+                pages[0]='⚠️ <b>لم تُنتج نتيجة تصنيف: بيانات غير كافية أو غير صالحة</b>\nلا يعني هذا أن جميع الأزواج خطرة أو مستقرة. افتح الحالة وتفاصيل CSV للتشخيص.\n\n'+pages[0]
+            else:self.request_state='COMPLETE'
             await msg.edit_text(pages[0],reply_markup=keyboard() if len(pages)==1 else None)
             for i,page in enumerate(pages[1:]):
                 await self.bot.send_message(chat,page,reply_markup=keyboard() if i==len(pages)-2 else None)
-            log.info('Scan completed profile=%s assessed=%d/%d',profile,sum(r.category!='unknown' for r in results),len(results))
-        except asyncio.CancelledError:raise
+            log.info('Scan %s profile=%s assessed=%d/%d reasons=%s','completed' if assessed else 'not_ready',profile,assessed,len(results),json.dumps(counts,sort_keys=True))
+        except asyncio.CancelledError:
+            self.request_state='CANCELLED';raise
         except Exception as exc:
+            self.request_state='DELIVERY_FAILED'
             log.warning('Scan failed type=%s',type(exc).__name__)
             with suppress(Exception):await self.bot.send_message(chat,'تعذر إيصال التقرير. أعد المحاولة؛ لم يتم اختراع أي نتيجة.',reply_markup=keyboard())
     async def callback(self,q):
@@ -83,7 +107,13 @@ class Controller:
             with suppress(TelegramBadRequest):await q.answer('بدأ الفحص')
             return
         await q.answer()
-        if action=='status':await q.message.answer(self.status(),reply_markup=keyboard())
+        if action=='cancel_scan':
+            if self.scan_task and not self.scan_task.done():
+                self.scan_task.cancel()
+                with suppress(asyncio.CancelledError):await self.scan_task
+                await q.message.answer('أُلغي طلب الفحص. تجميع الأسعار في الخلفية مستمر.',reply_markup=keyboard())
+            else:await q.message.answer('لا يوجد طلب جارٍ لإلغائه.',reply_markup=keyboard())
+        elif action=='status':await q.message.answer(self.status(),reply_markup=keyboard())
         elif action=='about':await q.message.answer(
           'ℹ️ <b>كيف يعمل الرادار؟</b>\n'
           'يقارن التذبذب بخط أساس سابق لنفس الزوج، ويقيس القفزات والانعكاسات وانتظام المسار. '
@@ -94,9 +124,11 @@ class Controller:
         elif action=='export':
             if not self.last_results:await q.message.answer('نفّذ فحصاً أولاً.');return
             out=io.StringIO();writer=csv.writer(out)
-            writer.writerow(['symbol','profile','classification','samples','age_seconds','volatility_ratio','spike_fraction','reversals','efficiency','coverage','rms_bps','reason'])
+            writer.writerow(['symbol','profile','classification','samples','age_seconds','volatility_ratio','spike_fraction','reversals','efficiency','coverage','rms_bps','reason','readiness_state','span_seconds','recent_buckets','recent_target','baseline_buckets','baseline_target','eta_seconds'])
+            details={d['symbol']:d for d in (self.last_readiness or {}).get('details',[])}
             for r in self.last_results:
-                writer.writerow([r.symbol,self.last_profile,r.category,r.samples,round(r.age,2),*[r.metrics.get(k,'') for k in ('volatility_ratio','spike_fraction','reversals','efficiency','coverage','rms_bps')],' | '.join(r.reasons)])
+                d=details.get(r.symbol,{})
+                writer.writerow([r.symbol,self.last_profile,r.category,r.samples,round(r.age,2),*[r.metrics.get(k,'') for k in ('volatility_ratio','spike_fraction','reversals','efficiency','coverage','rms_bps')],' | '.join(r.reasons),*[d.get(k,'') for k in ('state','span_seconds','recent','recent_target','baseline','baseline_target','eta_seconds')]])
             await q.message.answer_document(BufferedInputFile(out.getvalue().encode('utf-8-sig'),filename='radar_last_scan.csv'))
 
 async def main():
@@ -121,7 +153,7 @@ async def main():
         return web.json_response({'service':'Abood Market Radar','alive':True})
     for path in ('/','/health','/ready'):app.router.add_get(path,health)
     runner=web.AppRunner(app);await runner.setup();await web.TCPSite(runner,'0.0.0.0',cfg.port).start()
-    log.info('build=v2-feed-fix HTTP server ready; read-only radar starting')
+    log.info('build=v3-readiness-auto HTTP server ready; read-only radar starting')
     tasks=[]
     try:
         # Default is NOT to drop pending administrator messages.

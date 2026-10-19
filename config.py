@@ -20,6 +20,8 @@ class Config:
     stream_timeout: float = 45
     timestamp_offset: str = "auto"
     subscription_mode: str = "browser"
+    auto_wait_seconds: float = 660
+    progress_seconds: float = 15
 
     @classmethod
     def load(cls):
@@ -60,4 +62,9 @@ class Config:
             except ValueError:raise ValueError('Invalid PO_TIMESTAMP_OFFSET_SECONDS') from None
         c.subscription_mode=os.getenv('PO_SUBSCRIPTION_MODE','browser').strip().lower()
         if c.subscription_mode not in ('browser','subscribe_only'):raise ValueError('Invalid PO_SUBSCRIPTION_MODE')
+        c.auto_wait_seconds=float(os.getenv('AUTO_WAIT_SECONDS','660'))
+        c.progress_seconds=float(os.getenv('PROGRESS_SECONDS','15'))
+        import math
+        if not math.isfinite(c.auto_wait_seconds) or not 0<=c.auto_wait_seconds<=900:raise ValueError('Invalid AUTO_WAIT_SECONDS')
+        if not math.isfinite(c.progress_seconds) or not 5<=c.progress_seconds<=60:raise ValueError('Invalid PROGRESS_SECONDS')
         return c

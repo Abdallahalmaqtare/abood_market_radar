@@ -1,4 +1,4 @@
-Local mocked tests, no live authorization or trading.
+Local tests only. No live authorization or trading.
 
 test_browser_initialization (test_feed_fix.AsyncTests.test_browser_initialization) ... ok
 test_double_tap (test_feed_fix.AsyncTests.test_double_tap) ... ok
@@ -63,8 +63,28 @@ test_stale_data_unknown (test_feed_fix.FeedTests.test_stale_data_unknown) ... ok
 test_stock_not_added (test_feed_fix.FeedTests.test_stock_not_added) ... ok
 test_unknown_symbol_counted (test_feed_fix.FeedTests.test_unknown_symbol_counted) ... ok
 test_utc_accept (test_feed_fix.FeedTests.test_utc_accept) ... ok
+test_cancel_keeps_feed_and_buffers (test_readiness.AutoWait.test_cancel_keeps_feed_and_buffers) ... ok
+test_cold_request_waits_then_delivers_without_new_click (test_readiness.AutoWait.test_cold_request_waits_then_delivers_without_new_click) ... ok
+test_csv_uses_finished_readiness (test_readiness.AutoWait.test_csv_uses_finished_readiness) ... ok
+test_ready_scan_does_not_wait_warmup (test_readiness.AutoWait.test_ready_scan_does_not_wait_warmup) ... ok
+test_timeout_is_not_success (test_readiness.AutoWait.test_timeout_is_not_success) ... ok
+test_defaults (test_readiness.Configuration.test_defaults) ... ok
+test_disable (test_readiness.Configuration.test_disable) ... ok
+test_invalid (test_readiness.Configuration.test_invalid) ... ok
+test_180_seconds_can_classify (test_readiness.Readiness.test_180_seconds_can_classify) ... ok
+test_26_ready_and_6_missing (test_readiness.Readiness.test_26_ready_and_6_missing) ... ok
+test_38_seconds_is_warming_not_ready (test_readiness.Readiness.test_38_seconds_is_warming_not_ready) ... ok
+test_600_seconds_slow_ready (test_readiness.Readiness.test_600_seconds_slow_ready) ... ok
+test_cancel_button (test_readiness.Readiness.test_cancel_button) ... ok
+test_csv_ready_detail_fields (test_readiness.Readiness.test_csv_ready_detail_fields) ... ok
+test_disconnect_does_not_claim_ready (test_readiness.Readiness.test_disconnect_does_not_claim_ready) ... ok
+test_flat_not_warming_forever (test_readiness.Readiness.test_flat_not_warming_forever) ... ok
+test_no_ticks_no_countdown (test_readiness.Readiness.test_no_ticks_no_countdown) ... ok
+test_progress_not_a_result (test_readiness.Readiness.test_progress_not_a_result) ... ok
+test_recent_counts_have_real_targets (test_readiness.Readiness.test_recent_counts_have_real_targets) ... ok
+test_stale_not_warming (test_readiness.Readiness.test_stale_not_warming) ... ok
 
 ----------------------------------------------------------------------
-Ran 63 tests in 1.167s
+Ran 83 tests in 1.200s
 
 OK
